@@ -1,21 +1,44 @@
 # pppg-tooling
 
-Internal automation tooling for Pretty Pretty Pretty Good (PPPG) — a solo
-pro-bono/client web studio.
+Internal tooling for [Pretty Pretty Pretty Good](https://www.prettyprettyprettygood.org/):
+client tracking, inquiry email, and the path to new client websites.
+
+This repo is **not** a client website. New sites are created from the
+public GitHub template
+[`aftongauntlett/template`](https://github.com/aftongauntlett/template)
+(Astro, WCAG 2.2, `PROJECT_BRIEF.md` kickoff).
 
 ## What's here
 
-- **SPEC.md** — main spec: portfolio-to-resume sync, new-project social
-  post triggers, the client website template system, and the email intake
-  → Linear → build → approval pipeline.
-- **AGENTS.md** — rules and guardrails for any agent working in this repo
-  (approval gates, no auto-commits to client repos, etc).
+- [docs/SPEC.md](docs/SPEC.md) — how mail, Linear, Slack, and the
+  template fit together
+- [docs/AGENTS.md](docs/AGENTS.md) — rules for agents working here
 
-## Status
+## Current setup
 
-Early build. Follow the sequencing in SPEC.md — don't jump ahead to the
-client template system before the smaller automations are working.
+| Piece | Status |
+|---|---|
+| Linear ↔ Cursor (PPPG team) | Connected |
+| Slack ↔ Cursor | Connected |
+| Client site template | [`aftongauntlett/template`](https://github.com/aftongauntlett/template) (public GitHub template) |
+| Neo MCP in Cursor | Not connected yet (OAuth in the browser) |
+| New mail → Linear issue | Not wired yet (Zapier/Make IMAP, or a scheduled agent once Neo MCP works) |
 
-## Setup
+Portfolio, resume, and social posting are out of scope.
 
-Copy `.env.example` to `.env` and fill in real values. Never commit `.env`.
+## Start a client site
+
+1. On GitHub: **Use this template** on
+   [`aftongauntlett/template`](https://github.com/aftongauntlett/template)
+   (or `gh repo create --template aftongauntlett/template`).
+2. Fill `PROJECT_BRIEF.md`.
+3. Run `npm install`, then `npm run detach-template`.
+4. Open the new repo in Cursor and use the new-site-kickoff prompt.
+
+Do not clone `pppg-tooling` for that.
+
+## Setup (this repo)
+
+No app secrets live here. Linear and Slack use Cursor’s integrations.
+If we add Neo MCP or Zapier later, credentials stay in Cursor / Zapier,
+never in git.
