@@ -1,35 +1,44 @@
 # pppg-tooling
 
-Internal tooling for Pretty Pretty Pretty Good (PPPG): client tracking,
-inquiry email, and the path to new client websites.
+Internal tooling for [Pretty Pretty Pretty Good](https://www.prettyprettyprettygood.org/):
+client tracking, inquiry email, and the path to new client websites.
 
-This repo is **not** a client website starter. New client sites will
-come from `pppg-template` (a GitHub template, created separately).
+This repo is **not** a client website. New sites are created from the
+public GitHub template
+[`aftongauntlett/template`](https://github.com/aftongauntlett/template)
+(Astro, WCAG 2.2, `PROJECT_BRIEF.md` kickoff).
 
 ## What's here
 
-- [docs/SPEC.md](docs/SPEC.md) — spec: Neo mail → Linear, client
-  website template plan, and which connections I have to make in the
-  browser (Linear, Neo MCP, optional Zapier).
-- [docs/AGENTS.md](docs/AGENTS.md) — rules for any agent working here.
+- [docs/SPEC.md](docs/SPEC.md) — how mail, Linear, Slack, and the
+  template fit together
+- [docs/AGENTS.md](docs/AGENTS.md) — rules for agents working here
 
-## Status
+## Current setup
 
-Docs only. Portfolio/resume sync and social posting are out of scope.
-Linear, Neo MCP, and any IMAP zap are still **manual** (agents cannot
-complete OAuth).
+| Piece | Status |
+|---|---|
+| Linear ↔ Cursor (PPPG team) | Connected |
+| Slack ↔ Cursor | Connected |
+| Client site template | [`aftongauntlett/template`](https://github.com/aftongauntlett/template) (public GitHub template) |
+| Neo MCP in Cursor | Not connected yet (OAuth in the browser) |
+| New mail → Linear issue | Not wired yet (Zapier/Make IMAP, or a scheduled agent once Neo MCP works) |
 
-## Related repos
+Portfolio, resume, and social posting are out of scope.
 
-- Studio site:
-  [`prettyprettyprettygood`](https://github.com/aftongauntlett/prettyprettyprettygood)
-- Production references for the future template:
-  [`rcan`](https://github.com/aftongauntlett/rcan),
-  [`astrid-beauty`](https://github.com/aftongauntlett/astrid-beauty)
-- Existing SvelteKit starter (**not** the client template):
-  [`sveltekit-starter`](https://github.com/aftongauntlett/sveltekit-starter)
+## Start a client site
 
-## Setup
+1. On GitHub: **Use this template** on
+   [`aftongauntlett/template`](https://github.com/aftongauntlett/template)
+   (or `gh repo create --template aftongauntlett/template`).
+2. Fill `PROJECT_BRIEF.md`.
+3. Run `npm install`, then `npm run detach-template`.
+4. Open the new repo in Cursor and use the new-site-kickoff prompt.
 
-No app secrets in this repo yet. When automations need keys, they go in
-Cursor secrets or a gitignored `.env` — never committed.
+Do not clone `pppg-tooling` for that.
+
+## Setup (this repo)
+
+No app secrets live here. Linear and Slack use Cursor’s integrations.
+If we add Neo MCP or Zapier later, credentials stay in Cursor / Zapier,
+never in git.
