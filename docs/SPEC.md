@@ -7,143 +7,259 @@ build static marketing sites for local service businesses (lawyers,
 therapists, auto body shops, salons) — no backend or database work
 currently, but that could change per-client.
 
-This repo is for internal tooling and automation only. It should never
-directly modify my portfolio, resume, or live client repos — read from them
-where needed, but treat writes to those repos as something to propose, not
-execute silently.
+This repo is **internal tooling and automation only**. It is not a client
+website starter. Never clone it to start a client job.
+
+It should never silently modify my portfolio, resume, or live client
+repos. Read from them where needed; treat writes as a proposal (usually a
+PR) unless I explicitly ask to apply them.
+
+### Related repos
+
+| Repo | Role |
+|---|---|
+| `aftongauntlett/pppg-tooling` (this repo) | Studio automations, agent rules, intake pipeline glue |
+| `aftongauntlett/pppg-template` (to be created) | GitHub template for new client sites |
+| `aftongauntlett/react-portfolio` | Personal portfolio / job history source for resume sync |
+| `aftongauntlett/resume` | JSON → pdfmake resume; 2-page PDF |
+| `aftongauntlett/prettyprettyprettygood` | Studio marketing site (not the client starter) |
+| Live client repos (`rcan`, `astrid-beauty`, …) | Production sites; never used as the template itself |
+
+Social posting is **out of scope**. Do not draft or publish Bluesky,
+Facebook, or other social posts.
 
 ---
 
-## Part 1: Cross-repo automation
+## Part 1: Portfolio → resume sync
 
-### 1a. Portfolio → Resume sync
+When a new job / project entry is added to `react-portfolio`, update
+`resume` so `resumeData.json` reflects the same work.
 
-- When a new job entry is added to my portfolio repo, update my resume
-  repo to reflect the same addition.
-- Hard constraint: resume must never exceed 2 pages. If adding content
-  would exceed that, condense older/less relevant entries rather than
-  dropping the new one silently — flag the tradeoff to me.
+The resume repo already owns PDF generation (`npm run build` →
+`afton-gauntlett-resume.pdf` via pdfmake). After a successful resume
+build **on my machine**:
 
-### 1b. New project → social post
+- Copy `afton-gauntlett-resume.pdf` to `~/Desktop/afton-gauntlett-resume.pdf`
+- Replace the file if it already exists (`copyFileSync` overwrite is
+  correct; do not version-stamp the Desktop filename)
 
-- When a new client project goes live (defined as: added to the
-  "projects" section of my main site), generate a social post announcing
-  it, e.g. "Check out the new site I just built: [link]"
-- Target platforms: Bluesky and Facebook.
-- Draft for my review before publishing. Do not auto-post without a
-  check unless I explicitly change this later.
+Today, `build.js` auto-copies **cover letters** to Desktop but not the
+resume PDF. Resume Desktop copy is the documented operator workflow
+(README Option B). When this automation is implemented, add the same
+Desktop copy to the resume build path.
+
+**Hard constraint:** the PDF must stay **2 pages**. The resume repo
+already checks this with `pdfinfo`. If adding content would exceed 2
+pages, condense older / less relevant entries rather than dropping the
+new one silently — flag the tradeoff to me. Do not ship a 3-page PDF.
+
+**Cloud-agent caveat:** a cloud VM does not have my Mac Desktop. Cloud
+runs may update `resumeData.json`, rebuild the PDF, and open a PR on
+`resume`. The Desktop replace only happens when `npm run build` runs
+locally (or via a later local hook). Do not treat a cloud `~/Desktop`
+copy as success.
+
+Approval: propose a PR on `resume` (and only touch `resumeData.json` plus
+regenerated PDF as needed). Do not push to `resume` `main` unattended.
 
 ---
 
-## Part 2: Client website template system
+## Part 2: Client website template
 
-Evaluate whether a cloneable template repo is the right architecture for
-this, or propose a better approach if not.
+**Architecture (decided):** a separate GitHub **template** repo,
+`pppg-template`, that I create. Each new client is
+“Use this template” / `gh repo create --template`, then an agent fills
+it from the intake form. Do not clone `pppg-tooling` per client.
 
-**Goal:** A repo I can open per new client, drop in one prompt containing
-the client's info, and get a largely complete static website in one pass.
-Some back-and-forth refinement after is fine, but the first output should
-already be presentable.
+### Existing starter — reuse or start fresh?
+
+Reviewed `aftongauntlett/sveltekit-starter` (the existing personal
+starter) plus recent production sites `rcan` and `astrid-beauty`.
+
+**Start `pppg-template` fresh in Astro. Do not clone `sveltekit-starter`
+as the client template.**
+
+| Source | Verdict |
+|---|---|
+| `sveltekit-starter` | Nice a11y + HEX→HSL theme-sync ideas, but **SvelteKit**, last touched 2025-07, clone-not-template workflow. Wrong framework for current PPPG work. |
+| `rcan` | Closest **quality bar** (Astro 7, Tailwind 4, axe-core, Lighthouse CI, Playwright, Formspree + Turnstile). Live client site with admin/change-request extras — extract the toolchain, do not fork the repo. |
+| `astrid-beauty` | Production Astro + React islands + i18n. Too client-specific; Astro 5. Steal patterns, not the tree. |
+| `prettyprettyprettygood` | Studio site, not a generic client starter. |
+
+Steal from `rcan` for the template’s CI/quality floor: `astro check`,
+eslint `jsx-a11y`, Playwright + axe, Lighthouse CI, Formspree + Turnstile
+for contact. Keep the template **static-first** (no RCAN admin dashboard
+unless a client actually needs it).
+
+**Framework (decided):** lock the template to **Astro**. Do not keep it
+framework-agnostic. A database app, mobile app, or game is a different
+starter, not a flag on this one.
+
+**Goal:** open the new client repo, drop in one prompt plus the filled
+intake form, get a largely presentable static site in one pass.
+Refinement after that is expected.
 
 **Requirements:**
 
-- Accessibility is non-negotiable: WCAG 2.2, Section 508 compliance built
-  in by default, not optional.
-- Design tailored to the client's industry — reference common design
-  patterns for that industry and generate an original layout in that
-  spirit, not a generic template reskin.
-- If no logo is provided, generate one fitting the industry and theme.
+- Accessibility is non-negotiable: WCAG 2.2 AA and Section 508 **baked
+  into CI**, not only a prompt reminder.
+- Design tailored to the client's industry — reference common patterns
+  for that industry and generate an original layout in that spirit, not
+  a generic template reskin.
+- If no logo is provided, prefer a simple typographic lockup over an
+  AI-generated mark. Flag that generated image-logos are weak IP.
 - If no color theme is provided, choose one appropriate to the industry.
 - Always generate a custom favicon; never ship the framework default.
-- Source free, license-safe placeholder photography (e.g. Pexels,
-  Unsplash) automatically when the client hasn't supplied their own images.
+- Source free, license-safe photography (Pexels / Unsplash **APIs**)
+  when the client hasn't supplied images. Store attribution in the repo.
 
 **Client intake:**
 
-- Generate a reusable intake form (`.md` or similar) I can send to new
-  clients to collect what I need.
-- The filled-out form becomes the input the agent uses to build the site.
+- A reusable intake form (markdown is fine) lives in this tooling repo
+  and/or the template.
+- I send it to new clients; the filled form is the agent's input.
 
-**Framework decision:**
-
-- Currently using Astro. Advise whether that's still the right choice or
-  something else fits better.
-- Open question: lock the template repo to one framework, or keep it
-  framework-agnostic (rules/skills only) so it can flex into a
-  database-backed app, mobile app, or game if a future client needs that?
-  Weigh in given I'm a solo operator, not a team.
+**Future (not v1):** structured fields from email / the form land on the
+Linear issue automatically.
 
 ---
 
-## Part 3: Email intake → full client-request pipeline
+## Part 3: Email intake → Linear → site work
 
-**Setup context:**
+### Mailbox (decided): keep Neo
 
-- Isolated inbox on Titan (not personal email), used only for PPPG
-  client inquiries. Titan was chosen over Google Workspace for cost.
-  **Before building anything else in this section**, investigate Titan's
-  actual integration options: native API, IMAP/SMTP access, webhook
-  support, or third-party connector compatibility (Zapier/Make/etc). If
-  direct automation isn't reasonably supported, propose a workaround
-  (e.g. polling via IMAP on a schedule) or, if Titan genuinely can't
-  support this reliably, say so plainly and suggest an alternative
-  (e.g. a cheap Google Workspace mailbox used only for automation,
-  keeping Titan for anything that doesn't need to be automated) rather
-  than forcing something fragile.
-- Linear account for PPPG client/project tracking.
+The inquiry inbox is Neo Mail (`info@prettyprettyprettygood.org`), not
+Google Workspace. Neo is Titan-branded at the provider layer (same IMAP
+product; support even CCs `support@titan.email`). Do not migrate this
+mailbox for automation.
 
-**Goal:** A client email (new inquiry or an existing client's request/
-question) triggers an end-to-end pipeline, with explicit approval gates
-at the points that matter.
+| | |
+|---|---|
+| IMAP | `imap0001.neo.space:993` SSL/TLS |
+| SMTP | `smtp0001.neo.space:587` STARTTLS or `:465` SSL/TLS |
+| Auth | full email address + mailbox password |
+| POP | do not use (pulls mail off the server) |
 
-**Pipeline:**
+Neo has **no mailbox REST API and no “new mail” webhooks**. IMAP + SMTP
+are enough.
 
-1. Incoming client email is read and a Linear issue (or whatever Linear
-   calls its tracked item — confirm current terminology) is created,
-   summarizing the request.
-2. Work is completed directly on main (no feature branch — solo operator,
-   branch/merge overhead isn't worth it here; skip straight to work in
-   main unless a specific task seems risky enough to warrant isolating it,
-   in which case flag that to me rather than deciding silently).
-3. A separate review agent reviews the change.
-4. A separate agent confirms tests pass.
-5. Changes are committed — **requires my explicit approval before
-   committing, always.**
-6. Once approved and committed, the Linear issue is moved to Done.
-7. A reply email to the client is drafted — **requires my explicit
-   approval before sending, always.**
+**Neo setup I must do in webmail (agents cannot click this):**
 
-**Approval gates (non-negotiable):**
+1. Settings → **Enable Neo on other apps** (third-party IMAP).
+2. 2FA **blocks IMAP**. Neo has no Google-style app passwords. For this
+   isolated inquiry seat, disable 2FA on that mailbox only.
 
-- Committing to main: my approval required, every time.
-- Client-facing email: my approval required, every time.
-- Nothing in this pipeline should auto-commit or auto-send under any
-  circumstance, regardless of how minor the change or how confident the
-  review/test agents are.
+### Linear
 
-**Tracking what needs my attention:**
+Tracked items are **issues**, with **workflow states**, on a team.
 
-- Set up a Linear workflow state (e.g. "Needs Approval") that issues move
-  into automatically whenever they're sitting at a merge-approval or
-  email-approval gate.
-- Save a filtered Linear view scoped to that state so I have one place to
-  check for anything waiting on me, rather than needing to track it
-  manually or dig through general activity.
-- Consider whether a Linear notification/reminder tied to that state
-  would help surface it further (e.g. daily digest), without becoming
-  something I need to babysit constantly.
+Needed in the PPPG Linear team:
 
-**Future extension (not v1):** extract structured fields (services
-requested, business type, etc.) into the Linear card automatically, tying
-into the Part 2 intake form.
+- A `Needs approval` state (or equivalent) for merge-approval and
+  email-approval gates
+- A saved filtered view of that state (the one place I check)
+- Optional: Linear’s own notification / digest on that state — do not
+  build a custom reminder bot in v1
+
+Cursor can already run cloud agents from Linear (`@Cursor` in a comment,
+assign to Cursor, or a Cursor Automation on **Issue created** /
+**Status changed**). That requires the Linear integration connected in
+the Cursor dashboard — see [Connections](#connections-agents-cannot-finish-these).
+
+### v1 pipeline (decided)
+
+Keep v1 small. Prefer Zapier/Make before custom agent mail polling.
+
+1. **New IMAP email** in the Neo inquiry inbox → Zapier/Make → create a
+   Linear **issue** summarizing the request. Include sender, subject,
+   and a short body excerpt. Do not auto-reply.
+2. I triage: new inquiry vs existing-client change vs question. Agents
+   do **not** pick the git repo unattended. Maintain an explicit
+   `client → repo` map (in this tooling repo or Linear project fields)
+   before any “go edit the site” automation.
+3. If it is a site change: start a cloud agent **on that client repo**.
+   It opens a **draft PR**. The PR is the commit/approval gate — do not
+   work unattended on `main`.
+4. Move the Linear issue to `Needs approval`.
+5. I review and merge (or reject) the PR.
+6. After merge, move the issue to Done and **draft** a client reply
+   (Linear comment and/or IMAP draft). **Never send mail without my
+   explicit approval.** Prefer I send from Neo webmail.
+
+Do not stand up separate review-agent + test-agent runs per request.
+One agent + CI on the PR (including a11y checks) is enough for static
+sites. If a change is risky, flag it in the Linear issue.
+
+Nothing in this pipeline auto-merges or auto-sends, regardless of
+confidence.
+
+**Not v1:** IMAP polling from a Cursor cron, Neo MCP as the intake
+trigger, SMTP send from an agent, working on `main`, three-agent review
+chains.
+
+Neo’s MCP (`https://api.neo.space/mcp`) is useful later for interactive
+“summarize this thread” while I am in a session. It is **not** an
+event-driven new-mail trigger.
+
+---
+
+## Connections (agents cannot finish these)
+
+Neither this cloud agent nor another Grok/Cursor run can complete
+OAuth, click Neo settings, or create a Zapier zap. Those need my
+browser. Once they exist, later agents can *use* them.
+
+### Linear ↔ Cursor (required before any Linear-triggered agent)
+
+1. [Cursor Integrations](https://cursor.com/dashboard/integrations) →
+   **Connect** next to Linear.
+2. Authorize the PPPG Linear workspace and team.
+3. Confirm GitHub is connected (agents open PRs as me / Cursor).
+4. Optional but useful: in Linear, a `repo` label group with
+   `owner/repo` children (`aftongauntlett/rcan`, etc.) so issues can
+   name their client repo.
+5. Optional: a Cursor Automation at
+   [cursor.com/automations](https://cursor.com/automations) with trigger
+   **Linear → Issue created** (or **Status changed**), after v1 mail→
+   Linear is reliable. Do not auto-run code changes on every new issue
+   until the `client → repo` map exists.
+
+A Linear API key in Cursor secrets would let an agent *create* issues
+from a custom script. That is unnecessary if Zapier/Make creates the
+issue.
+
+### Neo mail → Linear (v1)
+
+1. Finish the Neo third-party / 2FA steps above.
+2. In Zapier or Make: IMAP trigger on
+   `imap0001.neo.space:993` with the inquiry address + password.
+3. Action: Linear “Create issue” on the PPPG team.
+4. Keep the mailbox password in Zapier/Make, not in this git repo and
+   not in a cloud-agent snapshot unless we later have a strong reason.
+
+### What an agent *can* do after that
+
+- Subscribe to Linear issue events in a running session (team/project/
+  issue scope)
+- Open PRs on a repo it was started against
+- Draft reply text in Linear comments
+- Read this spec and follow the approval gates
+
+It still cannot: log into Neo as me, authorize Linear, or save a Cursor
+Automation from inside a coding session.
 
 ---
 
 ## Build order
 
-Sequence: Part 1 → Part 3 → Part 2.
+1. **Part 1** — portfolio → resume PR + 2-page PDF check; Desktop copy
+   on local builds. Low-stakes, uses repos that already exist.
+2. **Part 3** — Neo IMAP → Linear issue only. Site-edit automations
+   wait until the `client → repo` map and Linear↔Cursor connection
+   exist.
+3. **Part 2** — `pppg-template` (I create the empty GitHub template;
+   implementation can proceed in that repo in parallel with 1–2, but
+   do not block intake work on template polish).
 
-Parts 1 and 3 are small, contained, and low-risk — good for validating the
-harness and building trust in unsupervised runs. Part 2 is a much bigger
-surface area (design decisions, image sourcing, framework flexibility) and
-should wait until the smaller pieces are working.
+Do not implement social, SMTP auto-send, or framework-agnostic
+templates.
